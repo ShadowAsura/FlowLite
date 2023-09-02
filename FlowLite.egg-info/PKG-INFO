@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: FlowLite
+Version: 0.1
+Summary: A simplified deep learning library
+Home-page: https://github.com/ShadowAsura/FlowLite
+Author: ShadowAsura
+Author-email: sremlogan@gmail.com
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Description-Content-Type: text/markdown
+Provides-Extra: dev
+License-File: LICENSE
+
+# FlowLite
+A lightweight, easy-to-use tensor computation library inspired by TensorFlow.

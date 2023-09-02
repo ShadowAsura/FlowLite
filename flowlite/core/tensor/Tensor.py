@@ -3,7 +3,7 @@ import math
 
 class Tensor:
     """
-    A simple Tensor class for educational purposes.
+    A simple Tensor class.
     """
 
     def __init__(self, shape, dtype='float', data=None):
@@ -270,6 +270,7 @@ class Tensor:
                 # Apply slice to data in this dimension
             elif isinstance(slice_or_index, int):
                 # Apply single index to data in this dimension
+                pass
             else:
                 raise IndexError("Only slices and integers are valid indices.")
 

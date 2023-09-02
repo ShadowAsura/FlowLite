@@ -1,4 +1,4 @@
-from flowlite.core.tensor import Tensor  # Now this should work
+from flowlite.core.tensor import Tensor
 import unittest
 
 
