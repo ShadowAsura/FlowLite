@@ -40,3 +40,33 @@ def sqrt(tensor):
     """
     new_data = array.array('d', [math.sqrt(x) for x in tensor.data])
     return Tensor(tensor.shape, tensor.dtype, data=new_data)
+
+
+
+def div(tensor1, tensor2):
+    """
+    Element-wise division of two tensors.
+    Assumes tensors have the same shape.
+
+    Args:
+        tensor1, tensor2 (Tensor): Input tensors.
+
+    Returns:
+        Tensor: New tensor with element-wise division result.
+    """
+    new_data = array.array('d', [a / b for a, b in zip(tensor1.data, tensor2.data)])
+    return Tensor(tensor1.shape, dtype=tensor1.dtype, data=new_data)
+
+def pow(tensor, exponent):
+    """
+    Raise each element in the tensor to a specific power.
+
+    Args:
+        tensor (Tensor): Input tensor.
+        exponent (float): The exponent to raise each element to.
+
+    Returns:
+        Tensor: New tensor with each element raised to the given power.
+    """
+    new_data = array.array('d', [math.pow(x, exponent) for x in tensor.data])
+    return Tensor(tensor.shape, dtype=tensor.dtype, data=new_data)

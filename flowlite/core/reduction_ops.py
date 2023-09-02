@@ -1,5 +1,6 @@
 from tensor import Tensor
 import array
+import statistics
 
 def sum(tensor, axis=None):
     """
@@ -107,3 +108,73 @@ def max(tensor, axis=None):
                 row_max = max(row_max, tensor.data[i*cols + j])
             new_data.append(row_max)
         return Tensor([rows], dtype=tensor.dtype, data=new_data)
+
+def flatten_to_2d(shape, data):
+    """
+    Flattens the tensor data into a 2D list based on the specified axis.
+
+    Args:
+        shape (tuple): Shape of the tensor.
+        data (array.array): Flat array containing tensor data.
+
+    Returns:
+        List of lists: 2D list containing tensor data.
+    """
+    rows = math.prod(shape[:-1])
+    cols = shape[-1]
+    two_d_data = [data[i * cols : (i + 1) * cols] for i in range(rows)]
+    return two_d_data
+
+def min(tensor, axis=None):
+    """
+    Compute the minimum value along the specified axis.
+
+    Args:
+        tensor (Tensor): Input tensor.
+        axis (int, optional): Axis along which to find the minimum value. If None, finds the global minimum.
+
+    Returns:
+        Tensor: A new tensor containing the minimum value.
+    """
+    if axis is None:
+        # Global minimum across all elements
+        min_value = min(tensor.data)
+        return Tensor([], dtype=tensor.dtype, data=array.array('d', [min_value]))
+
+    elif axis == -1:
+        # Minimum along the last axis
+        two_d_data = flatten_to_2d(tensor.shape, tensor.data)
+        min_values = [min(row) for row in two_d_data]
+        return Tensor(tensor.shape[:-1], dtype=tensor.dtype, data=array.array('d', min_values))
+
+    else:
+        # More complex axis-specific logic could go here
+        raise NotImplementedError("Arbitrary axis not yet implemented")
+
+def std(tensor, axis=None):
+    """
+    Compute the standard deviation along the specified axis.
+
+    Args:
+        tensor (Tensor): Input tensor.
+        axis (int, optional): Axis along which to find the standard deviation. If None, finds the global standard deviation.
+
+    Returns:
+        Tensor: A new tensor containing the standard deviation.
+    """
+    if axis is None:
+        # Global standard deviation across all elements
+        std_value = statistics.stdev(tensor.data)
+        return Tensor([], dtype=tensor.dtype, data=array.array('d', [std_value]))
+
+    elif axis == -1:
+        # Standard deviation along the last axis
+        two_d_data = flatten_to_2d(tensor.shape, tensor.data)
+        std_values = [statistics.stdev(row) for row in two_d_data]
+        return Tensor(tensor.shape[:-1], dtype=tensor.dtype, data=array.array('d', std_values))
+
+    else:
+        # More complex axis-specific logic could go here
+        raise NotImplementedError("Arbitrary axis not yet implemented")
+
+

@@ -97,6 +97,18 @@ class Tensor:
         for i, index in enumerate(indices):
             if index >= self.shape[i]:
                 raise ValueError("Index out of bounds")
+    def negate(tensor):
+        """
+        Element-wise negation of a tensor.
+
+        Args:
+            tensor (Tensor): Input tensor.
+
+        Returns:
+            Tensor: New tensor containing the element-wise negation.
+        """
+        new_data = array.array('d', [-x for x in tensor.data])
+        return Tensor(tensor.shape, dtype=tensor.dtype, data=new_data)
 
     def add(self, other_tensor):
         """
@@ -124,6 +136,18 @@ class Tensor:
             new_data[i] = self.data[i] + other_tensor.data[i]
         
         return Tensor(self.shape, self.dtype, data=new_data)
+    def reciprocal(tensor):
+        """
+        Element-wise reciprocal (1/x) of a tensor.
+
+        Args:
+            tensor (Tensor): Input tensor.
+
+        Returns:
+            Tensor: New tensor containing the element-wise reciprocal.
+        """
+        new_data = array.array('d', [1.0 / x for x in tensor.data])
+        return Tensor(tensor.shape, dtype=tensor.dtype, data=new_data)
 
     def sub(self, other_tensor):
         """
