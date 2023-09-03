@@ -6,7 +6,7 @@ class Tensor:
     A simple Tensor class.
     """
 
-    def __init__(self, shape, dtype='float', data=None):
+    def __init__(self, shape, dtype, data=None):
         """
         Initialize a new tensor.
 
@@ -15,22 +15,35 @@ class Tensor:
             dtype (str, optional): Data type of the tensor elements.
             data (list, optional): Flattened list of elements for the tensor.
         """
-        self.shape = shape
-        self.size = 1
-        for dim in shape:
-            self.size *= dim
-        self.dtype = dtype
-        if data is not None:
-            self.data = array.array('d', data)  # Using 'd' for double-precision float
+        if data is None:
+            self.size = 1
+            for dim in shape:
+                if isinstance(dim, int):
+                    self.size *= dim
+                else:
+                    raise ValueError("Invalid dimension in shape: must be integers.")
+            self.data = array.array('d', [0] * self.size)  # Initialize with zeros
+            self.shape = shape
         else:
-            self.data = array.array('d', [0] * self.size)
+            self.data = array.array('d', data)  # Use the array module to store data efficiently
+            self.shape = self._compute_shape(data)
+        
+        self.dtype = dtype
+        if self.shape is None:
+            raise ValueError("Shape computation failed, returned None.")
 
 
-    def __del__(self):
+    #def __del__(self):
         """
         Destructor to deallocate memory.
         """
-        del self.data
+     #   if hasattr(self, 'data'):
+     #       del self.data
+
+    def _ensure_tensor(self, other):
+        if isinstance(other, Tensor):
+            return other
+        return Tensor(other)
 
     def get_element(self, indices):
         """
@@ -42,12 +55,19 @@ class Tensor:
         Returns:
             Element at the given indices.
         """
-        flat_index = 0
-        multiplier = 1
-        for i in range(len(self.shape) - 1, -1, -1):
-            flat_index += indices[i] * multiplier
-            multiplier *= self.shape[i]
-        return self.data[flat_index]
+        idx = sum((x * y) for x, y in zip(indices, [1] + [self.shape[k] for k in range(len(self.shape) - 1)]))
+        return self.data[idx]
+
+    def _compute_shape(self, data):
+        shape = []
+        dtype = type(data)
+        while dtype == list:
+            shape.append(len(data))
+            if len(data) == 0:
+                break
+            data = data[0]
+            dtype = type(data)
+        return tuple(shape)
 
     def reshape(self, new_shape):
         """
@@ -79,7 +99,9 @@ class Tensor:
         Returns:
             Tensor: A new tensor containing the sliced data.
         """
-        pass  # Implement slicing logic here
+        # Placeholder for real slice functionality
+        return Tensor((1,))
+
 
     def validate_indices(self, indices):
         """
@@ -110,7 +132,7 @@ class Tensor:
         new_data = array.array('d', [-x for x in tensor.data])
         return Tensor(tensor.shape, dtype=tensor.dtype, data=new_data)
 
-    def add(self, other_tensor):
+    def __add__(self, other_tensor):
         """
         Element-wise addition of two tensors, with broadcasting support.
 
@@ -120,15 +142,8 @@ class Tensor:
         Returns:
             Tensor: New tensor resulting from the addition.
         """
-        # Broadcasting logic
-        if self.shape != other_tensor.shape:
-            self = self._broadcast_to_match(other_tensor)
-            other_tensor = other_tensor._broadcast_to_match(self)
-
-        # Step 1: Check if shapes match
-        if self.shape != other_tensor.shape:
-            # Here, you would add your broadcasting logic
-            raise ValueError("Shapes must match for addition")
+        other_tensor = self._ensure_tensor(other_tensor)
+        self._broadcast_to_match(other_tensor)
 
         # Step 2: Perform addition
         new_data = array.array('d', [0] * self.size)
@@ -149,7 +164,7 @@ class Tensor:
         new_data = array.array('d', [1.0 / x for x in tensor.data])
         return Tensor(tensor.shape, dtype=tensor.dtype, data=new_data)
 
-    def sub(self, other_tensor):
+    def __sub__(self, other_tensor):
         """
         Element-wise subtraction of two tensors.
 
@@ -159,9 +174,8 @@ class Tensor:
         Returns:
             Tensor: New tensor resulting from the subtraction.
         """
-        if self.shape != other_tensor.shape:
-            # Add broadcasting logic here
-            raise ValueError("Shapes must match for subtraction")
+        other_tensor = self._ensure_tensor(other_tensor)
+        self._broadcast_to_match(other_tensor)
 
         new_data = array.array('d', [0] * self.size)
         for i in range(self.size):
@@ -169,7 +183,7 @@ class Tensor:
 
         return Tensor(self.shape, self.dtype, data=new_data)
 
-    def mul(self, other_tensor):
+    def __mul__(self, other_tensor):
         """
         Element-wise multiplication of two tensors.
 
@@ -179,9 +193,8 @@ class Tensor:
         Returns:
             Tensor: New tensor resulting from the multiplication.
         """
-        if self.shape != other_tensor.shape:
-            # Add broadcasting logic here
-            raise ValueError("Shapes must match for multiplication")
+        other_tensor = self._ensure_tensor(other_tensor)
+        self._broadcast_to_match(other_tensor)
 
         new_data = array.array('d', [0] * self.size)
         for i in range(self.size):
@@ -228,27 +241,30 @@ class Tensor:
         Returns:
             Tensor: A new tensor broadcasted to the shape of other_tensor.
         """
-        # Step 1: Make sure broadcasting is possible
-        if len(self.shape) > len(other_tensor.shape):
-            raise ValueError("Broadcasting is not possible")
 
-        # Step 2: Determine the resulting shape
+        other_shape = other_tensor.shape
+        self_shape = self.shape
+
+        if len(self_shape) > len(other_shape):
+            return ValueError("Cannot broadcast.")
+
+        # Extend shape with ones at the front
+        self_shape = [1] * (len(other_shape) - len(self_shape)) + list(self_shape)
+
+        # Create a new array with extended shape
+        new_data = array.array('d', [0] * self.size)
         new_shape = []
-        for dim1, dim2 in zip(self.shape[::-1], other_tensor.shape[::-1]):
-            if dim1 == dim2:
-                new_shape.append(dim1)
-            elif dim1 == 1:
-                new_shape.append(dim2)
+        for dim1, dim2 in zip(reversed(self_shape), reversed(other_shape)):
+            if dim1 == 1:
+                new_shape.insert(0, dim2)
+            elif dim1 != dim2:
+                return ValueError("Cannot broadcast.")
             else:
-                raise ValueError("Broadcasting is not possible")
-        new_shape = new_shape[::-1]
+                new_shape.insert(0, dim1)
 
-        # Step 3: Create new data array with broadcasted shape
-        new_data = array.array('d', [0] * self.size * len(new_shape))
+        # ... (copy and expand data to new_data)
 
-        # Add your broadcasting logic here. This involves populating the new_data array.
-
-        return Tensor(new_shape, self.dtype, data=new_data)
+        return Tensor(shape=new_shape, dtype=self.dtype, data=new_data)
 
     def __getitem__(self, indices):
         """
@@ -262,19 +278,25 @@ class Tensor:
         """
         # Add advanced indexing logic here
         # For now, only slices without strides are implemented
-        new_shape = []
-        new_data = []
-        for dim, slice_or_index in enumerate(indices):
-            if isinstance(slice_or_index, slice):
-                new_shape.append(slice_or_index.stop - slice_or_index.start)
-                # Apply slice to data in this dimension
-            elif isinstance(slice_or_index, int):
-                # Apply single index to data in this dimension
-                pass
+        if isinstance(indices, int) or all(isinstance(i, int) for i in indices):
+            return self.get_element(indices if isinstance(indices, tuple) else (indices,))
+        
+        if isinstance(indices, slice):
+            indices = (indices,)
+        
+        start_indices = []
+        end_indices = []
+        for i, index_or_slice in enumerate(indices):
+            if isinstance(index_or_slice, slice):
+                start = index_or_slice.start if index_or_slice.start is not None else 0
+                end = index_or_slice.stop if index_or_slice.stop is not None else self.shape[i]
+                start_indices.append(start)
+                end_indices.append(end)
             else:
-                raise IndexError("Only slices and integers are valid indices.")
-
-        return Tensor(new_shape, self.dtype, data=new_data)
+                start_indices.append(index_or_slice)
+                end_indices.append(index_or_slice + 1)
+        
+        return self.slice(tuple(start_indices), tuple(end_indices))
 
     def add_(self, other_tensor):
         """
@@ -294,59 +316,59 @@ class Tensor:
 
     # Within the Tensor class
 
-def concat(self, other_tensor, axis):
-    """
-    Concatenate tensor with another tensor along a specified axis.
+    def concat(self, other_tensor, axis):
+        """
+        Concatenate tensor with another tensor along a specified axis.
 
-    Args:
-        other_tensor (Tensor): The tensor to concatenate.
-        axis (int): The axis along which to concatenate.
+        Args:
+            other_tensor (Tensor): The tensor to concatenate.
+            axis (int): The axis along which to concatenate.
 
-    Returns:
-        Tensor: A new tensor resulting from the concatenation.
-    """
-    # Step 1: Validate that concatenation is possible along the given axis
-    if axis >= len(self.shape) or axis < -len(self.shape):
-        raise ValueError("Invalid axis")
+        Returns:
+            Tensor: A new tensor resulting from the concatenation.
+        """
+        # Step 1: Validate that concatenation is possible along the given axis
+        if axis >= len(self.shape) or axis < -len(self.shape):
+            raise ValueError("Invalid axis")
 
-    for dim in range(len(self.shape)):
-        if dim == axis:
-            continue
-        if self.shape[dim] != other_tensor.shape[dim]:
-            raise ValueError("All dimensions except the axis must match for concatenation")
+        for dim in range(len(self.shape)):
+            if dim == axis:
+                continue
+            if self.shape[dim] != other_tensor.shape[dim]:
+                raise ValueError("All dimensions except the axis must match for concatenation")
 
-    # Step 2: Determine the shape of the resulting tensor
-    new_shape = list(self.shape)
-    new_shape[axis] += other_tensor.shape[axis]
-    new_size = 1
-    for dim in new_shape:
-        new_size *= dim
+        # Step 2: Determine the shape of the resulting tensor
+        new_shape = list(self.shape)
+        new_shape[axis] += other_tensor.shape[axis]
+        new_size = 1
+        for dim in new_shape:
+            new_size *= dim
 
-    # Step 3: Create new data array
-    new_data = array.array('d', [0] * new_size)
+        # Step 3: Create new data array
+        new_data = array.array('d', [0] * new_size)
 
-    # Step 4: Populate new data array
-    index_self = 0  # To keep track of where to read from self.data
-    index_other = 0  # To keep track of where to read from other_tensor.data
-    index_new = 0  # To keep track of where to write to new_data
+        # Step 4: Populate new data array
+        index_self = 0  # To keep track of where to read from self.data
+        index_other = 0  # To keep track of where to read from other_tensor.data
+        index_new = 0  # To keep track of where to write to new_data
 
-    # We'll assume 2D tensor for illustration, but this should be generalized for n-D
-    for i in range(new_shape[0]):
-        for j in range(new_shape[1]):
-            if axis == 0:
-                if i < self.shape[0]:
-                    new_data[index_new] = self.data[index_self]
-                    index_self += 1
-                else:
-                    new_data[index_new] = other_tensor.data[index_other]
-                    index_other += 1
-            elif axis == 1:
-                if j < self.shape[1]:
-                    new_data[index_new] = self.data[index_self]
-                    index_self += 1
-                else:
-                    new_data[index_new] = other_tensor.data[index_other]
-                    index_other += 1
-            index_new += 1
+        # We'll assume 2D tensor for illustration, but this should be generalized for n-D
+        for i in range(new_shape[0]):
+            for j in range(new_shape[1]):
+                if axis == 0:
+                    if i < self.shape[0]:
+                        new_data[index_new] = self.data[index_self]
+                        index_self += 1
+                    else:
+                        new_data[index_new] = other_tensor.data[index_other]
+                        index_other += 1
+                elif axis == 1:
+                    if j < self.shape[1]:
+                        new_data[index_new] = self.data[index_self]
+                        index_self += 1
+                    else:
+                        new_data[index_new] = other_tensor.data[index_other]
+                        index_other += 1
+                index_new += 1
 
-    return Tensor(new_shape, self.dtype, data=new_data)
+        return Tensor(new_shape, self.dtype, data=new_data)

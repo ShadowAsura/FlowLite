@@ -9,15 +9,15 @@ FlowLite.egg-info/top_level.txt
 docs/__init__.py
 examples/__init__.py
 flowlite/__init__.py
-flowlite/core/Tensor.py
 flowlite/core/__init__.py
 flowlite/core/activations.py
 flowlite/core/math_ops.py
 flowlite/core/matrix_ops.py
 flowlite/core/nn_layers.py
 flowlite/core/reduction_ops.py
+flowlite/core/tensor/Tensor.py
+flowlite/core/tensor/__init__.py
 flowlite/layers/__init__.py
 flowlite/optim/__init__.py
 flowlite/utils/__init__.py
-tests/__init__.py
 tests/test_tensor.py
